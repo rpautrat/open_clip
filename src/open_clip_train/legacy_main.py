@@ -56,7 +56,8 @@ def main(args):
         # float16 and almost as accurate as float32
         # This was a default in pytorch until 1.12
         torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.benchmark = True
+        # MIOpen autotuning can fail during ViT patch-convolution backward on ROCm.
+        torch.backends.cudnn.benchmark = torch.version.hip is None
         torch.backends.cudnn.deterministic = False
 
     # fully initialize distributed device environment

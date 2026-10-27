@@ -212,6 +212,26 @@ pip install -U pip
 
 You can then install openclip for training with `pip install 'open_clip_torch[training]'`.
 
+#### AMD GPUs (ROCm)
+
+Install matching ROCm builds of PyTorch and torchvision using the
+[PyTorch installation instructions](https://pytorch.org/get-started/locally/).
+An NVIDIA CUDA build of PyTorch cannot use AMD GPUs. For example, with a compatible
+ROCm 7.2 system:
+
+```bash
+python -m pip install torch==2.14.1+rocm7.2 torchvision==0.29.1+rocm7.2 \
+    --index-url https://download.pytorch.org/whl/rocm7.2
+python -c "import torch; print(torch.version.hip, torch.cuda.is_available(), torch.cuda.device_count())"
+```
+
+PyTorch on ROCm uses the `cuda` device/API names: keep `--device cuda`, mixed-precision
+options, and the `nccl` distributed backend (implemented by RCCL on ROCm). Select
+AMD GPUs with `HIP_VISIBLE_DEVICES`, for example
+`HIP_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 --module -- open_clip_train.main ...`.
+Both training entrypoints disable convolution autotuning on ROCm to avoid MIOpen
+failures during ViT patch-convolution backward; NVIDIA autotuning remains enabled.
+
 #### Development
 
 If you want to make changes to contribute code, you can clone openclip then run `make install` in openclip folder (after creating a virtualenv)

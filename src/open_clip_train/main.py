@@ -54,6 +54,7 @@ from open_clip_train.train import (
     train_one_epoch,
 )
 from open_clip_train.zero_shot import validate_imagenet_zeroshot_compatible
+from open_clip_train.retrieval_eval import RETRIEVAL_DATA_PREFIX, validate_retrieval_compatible
 
 _logger = logging.getLogger('open_clip_train.main')
 LATEST_CHECKPOINT_NAME = "epoch_latest.pt"
@@ -341,6 +342,8 @@ def main(args):
     task = create_task(args, model=model, dist_model=dist_model, naflex_data_config=naflex_data_config)
     if args.imagenet_val is not None or args.imagenet_v2 is not None:
         validate_imagenet_zeroshot_compatible(model)
+    if getattr(args, 'retrieval_val', None):
+        validate_retrieval_compatible(model)
 
     if args.fsdp and not args.distributed:
         _logger.warning('--fsdp requires distributed mode. Ignoring --fsdp for single-process training.')
@@ -536,7 +539,7 @@ def main(args):
                 classnames=[],
                 dataset_name=args.audio_zeroshot_dataset,
             )
-    assert len(data), 'At least one train, validation, ImageNet, or audio zero-shot dataset must be specified.'
+    assert len(data), 'At least one train, validation, ImageNet, retrieval, or audio zero-shot dataset must be specified.'
 
     # create scheduler if train
     scheduler = None
@@ -639,7 +642,8 @@ def main(args):
         train_one_epoch(train_state, data, args, tb_writer=writer)
         completed_epoch = epoch + 1
 
-        if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2', 'audio-zeroshot')):
+        if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2', 'audio-zeroshot')) or any(
+                key.startswith(RETRIEVAL_DATA_PREFIX) for key in data):
             evaluate(train_state.task, data, completed_epoch, args, tb_writer=writer, tokenizer=tokenizer)
             # sync to avoid some processes advancing/exiting while rank 0 finishes eval
             if args.distributed:

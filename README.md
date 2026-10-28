@@ -283,6 +283,14 @@ python -m open_clip_train.main \
 Note: `imagenet-val` is the path to the *validation* set of ImageNet for zero-shot evaluation, not the training set!
 You can remove this argument if you do not want to perform zero-shot evaluation on ImageNet throughout training. Note that the `val` folder should contain subfolders. If it does not, please use [this script](https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/valprep.sh).
 
+Zero-shot image-text retrieval (R@1/5 in both directions) on multi-caption benchmarks such as Flickr30k and MSCOCO 5k can also run on the `--zeroshot-frequency` schedule via `--retrieval-val name=path [name=path ...]`. Each path is a directory of webdataset `.tar` shards (or a shard spec) whose samples contain an image and a `txt` member with one caption per line; an image-to-text query counts as a hit if any of its captions is retrieved. The [CLIP_benchmark](https://github.com/LAION-AI/CLIP_benchmark) test splits on Hugging Face (`clip-benchmark/wds_flickr30k`, `clip-benchmark/wds_mscoco_captions`) use this layout:
+
+```bash
+    --retrieval-val flickr30k=/path/to/wds_flickr30k/test mscoco=/path/to/wds_mscoco_captions/test
+```
+
+Metrics are logged as `<name>-retrieval-image_to_text_R@K` and `<name>-retrieval-text_to_image_R@K`.
+
 ### torch.compile
 
 Training supports `torch.compile` via `--torchcompile`. Use `--torchcompile-strategy task` for the common case: it compiles the task train/eval forward callables while keeping the `TrainingTask` object itself unwrapped for checkpointing, batch preparation, eval, and zero-shot helpers. Use `--torchcompile-strategy model` when you want the lower-risk pre-DDP behavior of compiling only the underlying trainable module, especially for fp16 AMP runs that need a `GradScaler`. Use `--torchcompile-strategy step` for the most aggressive single-batch path: it compiles forward, loss, backward, optional grad clipping, optimizer step, and logit-scale clamp, but requires `--accum-freq 1` and a precision mode without `GradScaler` such as the default `amp_bf16` or `fp32`. `--torchcompile-backend` and `--torchcompile-mode` are passed through to `torch.compile`.

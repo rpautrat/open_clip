@@ -1246,4 +1246,8 @@ def get_data(args, preprocess_fns, model_traits, epoch=0, tokenizer=None, naflex
             naflex_data_config=naflex_data_config,
         )
 
+    if getattr(args, 'retrieval_val', None):
+        from open_clip_train.retrieval_eval import build_retrieval_datasets
+        data.update(build_retrieval_datasets(args, preprocess_val, naflex_data_config=naflex_data_config))
+
     return data

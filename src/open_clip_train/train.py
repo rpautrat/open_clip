@@ -27,6 +27,7 @@ from open_clip_train.distributed import is_master
 from open_clip_train.eval_utils import iter_eval_batches, log_eval_metrics, maybe_compute_generative_loss
 from open_clip_train.metrics import DEFAULT_RETRIEVAL_CHUNK_SIZE
 from open_clip_train.metrics import get_clip_metrics
+from open_clip_train.retrieval_eval import RETRIEVAL_DATA_PREFIX, retrieval_eval
 from open_clip_train.scheduler import get_learning_rate
 from open_clip_train.zero_shot import zero_shot_eval
 from open_clip_train.precision import get_autocast
@@ -487,6 +488,8 @@ def zero_shot_eval_all(task, data, epoch, args, tokenizer=None):
     zero_shot_metrics = {}
     if "imagenet-val" in data or "imagenet-v2" in data:
         zero_shot_metrics.update(zero_shot_eval(task, data, epoch, args, tokenizer=tokenizer))
+    if any(key.startswith(RETRIEVAL_DATA_PREFIX) for key in data):
+        zero_shot_metrics.update(retrieval_eval(task, data, epoch, args, tokenizer=tokenizer))
     if "audio-zeroshot" in data:
         from open_clip_train.audio_zero_shot import audio_zero_shot_eval
 

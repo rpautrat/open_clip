@@ -242,6 +242,17 @@ def parse_args(args):
         help="Path to imagenet v2 for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--retrieval-val",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Zero-shot image-text retrieval benchmarks (R@1/5, run on the --zeroshot-frequency schedule). "
+             "Each entry is 'name=path' or just 'path', where path is a directory of webdataset .tar shards, a "
+             "brace-expandable shard spec, or a single .tar. Each sample needs an image (jpg/jpeg/png/webp) and a "
+             "'txt' member with one caption per line, e.g. the CLIP_benchmark wds_flickr30k / wds_mscoco_captions "
+             "test splits.",
+    )
+    parser.add_argument(
         "--cache-dir",
         type=str,
         default=None,

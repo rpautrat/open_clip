@@ -52,6 +52,8 @@ def main(args):
         raise NotImplementedError("Audio training is only supported by open_clip_train.main.")
     if getattr(args, 'retrieval_val', None):
         raise NotImplementedError("--retrieval-val is only supported by open_clip_train.main.")
+    if getattr(args, 'cone_val', None):
+        raise NotImplementedError("--cone-val is only supported by open_clip_train.main.")
 
     if torch.cuda.is_available():
         # This enables tf32 on Ampere GPUs which is only 8% slower than

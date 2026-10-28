@@ -291,6 +291,8 @@ Zero-shot image-text retrieval (R@1/5 in both directions) on multi-caption bench
 
 Metrics are logged as `<name>-retrieval-image_to_text_R@K` and `<name>-retrieval-text_to_image_R@K`.
 
+`--cone-val name=path [name=path ...]` measures the cone effect on the same shard layout: the mean cosine similarity over all distinct pairs of image embeddings, and separately of caption embeddings (logged as `<name>-cone-image_mean_cosine` / `<name>-cone-text_mean_cosine`; values near 1 mean the embeddings occupy a narrow cone). It also follows `--zeroshot-frequency`, e.g. `--cone-val flickr30k=/path/to/wds_flickr30k/test`.
+
 ### torch.compile
 
 Training supports `torch.compile` via `--torchcompile`. Use `--torchcompile-strategy task` for the common case: it compiles the task train/eval forward callables while keeping the `TrainingTask` object itself unwrapped for checkpointing, batch preparation, eval, and zero-shot helpers. Use `--torchcompile-strategy model` when you want the lower-risk pre-DDP behavior of compiling only the underlying trainable module, especially for fp16 AMP runs that need a `GradScaler`. Use `--torchcompile-strategy step` for the most aggressive single-batch path: it compiles forward, loss, backward, optional grad clipping, optimizer step, and logit-scale clamp, but requires `--accum-freq 1` and a precision mode without `GradScaler` such as the default `amp_bf16` or `fp32`. `--torchcompile-backend` and `--torchcompile-mode` are passed through to `torch.compile`.

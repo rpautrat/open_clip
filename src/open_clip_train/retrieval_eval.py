@@ -56,7 +56,7 @@ def _default_retrieval_name(path: str) -> str:
     return name
 
 
-def parse_retrieval_specs(specs: Sequence[str]) -> List[Tuple[str, str]]:
+def parse_retrieval_specs(specs: Sequence[str], option: str = "--retrieval-val") -> List[Tuple[str, str]]:
     """Parse ``name=path`` (or bare ``path``) entries into unique ``(name, path)`` pairs."""
     parsed = []
     for spec in specs:
@@ -65,12 +65,12 @@ def parse_retrieval_specs(specs: Sequence[str]) -> List[Tuple[str, str]]:
             name, path = _default_retrieval_name(spec), spec
         name, path = name.strip(), path.strip()
         if not name or not path:
-            raise ValueError(f"Invalid --retrieval-val entry {spec!r}; expected 'name=path' or 'path'.")
+            raise ValueError(f"Invalid {option} entry {spec!r}; expected 'name=path' or 'path'.")
         parsed.append((name, path))
     names = [name for name, _ in parsed]
     duplicates = sorted({name for name in names if names.count(name) > 1})
     if duplicates:
-        raise ValueError(f"Duplicate --retrieval-val names {duplicates}; use 'name=path' to disambiguate.")
+        raise ValueError(f"Duplicate {option} names {duplicates}; use 'name=path' to disambiguate.")
     return parsed
 
 
@@ -195,8 +195,12 @@ def compute_retrieval_metrics(
     return metrics
 
 
-def run_retrieval_eval(model_or_task, dataloader, args, tokenizer, use_fsdp_eval=False) -> Dict[str, float]:
-    """Encode all images/captions, then score on rank 0. Under FSDP every rank runs matching forwards."""
+def encode_image_text_dataset(model_or_task, dataloader, args, tokenizer, use_fsdp_eval=False):
+    """Encode every image and caption from a multi-caption loader.
+
+    Returns ``(image_features, text_features, text_to_image)`` on the scoring rank, or ``None`` on non-scoring
+    FSDP ranks (which run matching dummy forwards) and when the loader is empty.
+    """
     device = torch.device(args.device)
     input_dtype = get_input_dtype(args.precision)
     autocast = get_autocast(args.precision, device_type=device.type, fsdp=getattr(args, "fsdp", False))
@@ -224,10 +228,16 @@ def run_retrieval_eval(model_or_task, dataloader, args, tokenizer, use_fsdp_eval
                 num_images += image_out.shape[0]
 
     if not score or num_images == 0:
+        return None
+    return torch.cat(image_features), torch.cat(text_features), torch.cat(text_to_image)
+
+
+def run_retrieval_eval(model_or_task, dataloader, args, tokenizer, use_fsdp_eval=False) -> Dict[str, float]:
+    """Encode all images/captions, then score on rank 0. Under FSDP every rank runs matching forwards."""
+    encoded = encode_image_text_dataset(model_or_task, dataloader, args, tokenizer, use_fsdp_eval=use_fsdp_eval)
+    if encoded is None:
         return {}
-    return compute_retrieval_metrics(
-        torch.cat(image_features), torch.cat(text_features), torch.cat(text_to_image),
-    )
+    return compute_retrieval_metrics(*encoded)
 
 
 def retrieval_eval(model_or_task, data, epoch, args, tokenizer=None) -> Dict[str, float]:

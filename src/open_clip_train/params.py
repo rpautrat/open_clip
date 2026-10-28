@@ -253,6 +253,15 @@ def parse_args(args):
              "test splits.",
     )
     parser.add_argument(
+        "--cone-val",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Cone-effect eval: mean pairwise cosine similarity (distinct pairs) of the image embeddings and of "
+             "the text embeddings, run on the --zeroshot-frequency schedule. Entries use the same 'name=path' "
+             "format and shard layout as --retrieval-val (e.g. the Flickr30k test split).",
+    )
+    parser.add_argument(
         "--cache-dir",
         type=str,
         default=None,

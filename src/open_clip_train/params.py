@@ -257,9 +257,17 @@ def parse_args(args):
         type=str,
         nargs="+",
         default=None,
-        help="Cone-effect eval: mean pairwise cosine similarity (distinct pairs) of the image embeddings and of "
-             "the text embeddings, run on the --zeroshot-frequency schedule. Entries use the same 'name=path' "
-             "format and shard layout as --retrieval-val (e.g. the Flickr30k test split).",
+        help="Cone-effect eval of the image embeddings and of the text embeddings, run on the --zeroshot-frequency "
+             "schedule: the spread-out metric (mean pairwise cosine similarity over distinct pairs) and the "
+             "uniformity metric of Wang & Isola (2020), log mean exp(-t * ||e_i - e_j||^2) over distinct pairs of "
+             "normalized embeddings. Entries use the same 'name=path' format and shard layout as --retrieval-val "
+             "(e.g. the Flickr30k test split).",
+    )
+    parser.add_argument(
+        "--cone-uniformity-t",
+        type=float,
+        default=2.0,
+        help="Temperature t of the --cone-val uniformity metric (default 2, as in Wang & Isola, 2020).",
     )
     parser.add_argument(
         "--cache-dir",

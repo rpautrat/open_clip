@@ -291,7 +291,12 @@ Zero-shot image-text retrieval (R@1/5 in both directions) on multi-caption bench
 
 Metrics are logged as `<name>-retrieval-image_to_text_R@K` and `<name>-retrieval-text_to_image_R@K`.
 
-`--cone-val name=path [name=path ...]` measures the cone effect on the same shard layout: the mean cosine similarity over all distinct pairs of image embeddings, and separately of caption embeddings (logged as `<name>-cone-image_mean_cosine` / `<name>-cone-text_mean_cosine`; values near 1 mean the embeddings occupy a narrow cone). It also follows `--zeroshot-frequency`, e.g. `--cone-val flickr30k=/path/to/wds_flickr30k/test`.
+`--cone-val name=path [name=path ...]` measures the cone effect on the same shard layout, separately for the image and caption embeddings, with two metrics computed over all distinct pairs:
+
+- **spread-out**: mean pairwise cosine similarity, logged as `<name>-cone-{image,text}_spread_out`. About 0 for embeddings spread uniformly over the sphere; values near 1 mean the embeddings occupy a narrow cone.
+- **uniformity** ([Wang & Isola, 2020](https://arxiv.org/abs/2005.10242)): `log mean exp(-t * ||e_i - e_j||^2)` on L2-normalized embeddings, logged as `<name>-cone-{image,text}_uniformity`. Ranges over `[-4t, 0]`; 0 means fully collapsed, lower means more uniform (about `-2t + 2t²/d` for embeddings spread uniformly over the sphere in dimension `d`). `t` is set with `--cone-uniformity-t` (default 2, as in the paper).
+
+Both follow `--zeroshot-frequency`, e.g. `--cone-val flickr30k=/path/to/wds_flickr30k/test`.
 
 ### torch.compile
 

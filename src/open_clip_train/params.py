@@ -617,8 +617,15 @@ def parse_args(args):
         "--report-to",
         default='',
         type=str,
-        help="Comma-separated logging backends: 'wandb', 'trackio' (local-first, wandb-compatible), 'tensorboard'. "
-             "'wandb' and 'trackio' are mutually exclusive; either can be combined with 'tensorboard'."
+        help="Comma-separated logging backends: 'wandb', 'trackio' (local-first, wandb-compatible), 'tensorboard', "
+             "'mlflow' (configured from MLFLOW_TRACKING_URI etc.; logs into the Azure ML job's run when run there). "
+             "'wandb' and 'trackio' are mutually exclusive; either can be combined with 'tensorboard' and 'mlflow'."
+    )
+    parser.add_argument(
+        "--mlflow-experiment-name",
+        type=str,
+        default="open_clip",
+        help="MLflow experiment of the created run when logging with mlflow outside an existing run (no MLFLOW_RUN_ID)."
     )
     parser.add_argument(
         "--wandb-notes",

@@ -27,6 +27,7 @@ from open_clip_train.distributed import is_master
 from open_clip_train.eval_utils import iter_eval_batches, log_eval_metrics, maybe_compute_generative_loss
 from open_clip_train.metrics import DEFAULT_RETRIEVAL_CHUNK_SIZE
 from open_clip_train.metrics import get_clip_metrics
+from open_clip_train.mlflow_logger import get_mlflow_logger
 from open_clip_train.cone_eval import CONE_DATA_PREFIX, cone_eval
 from open_clip_train.retrieval_eval import RETRIEVAL_DATA_PREFIX, retrieval_eval
 from open_clip_train.scheduler import get_learning_rate
@@ -351,6 +352,7 @@ def train_one_epoch(state: TrainState, data, args, tb_writer=None):
     ema_samples = getattr(args, "train_loss_ema_samples", 0)
     metric_every = max(1, getattr(args, "log_metric_every_n_steps", args.log_every_n_steps))
     wb = get_wandb_backend(args)  # wandb or trackio (same API), or None
+    mlflow_logger = get_mlflow_logger()  # None unless --report-to mlflow (master rank only)
     # Global samples observed at the previous EMA update (seeded from the persistent counter so the EMA horizon
     # stays continuous across epochs); the EMA decays by the sample delta between metric logs.
     prev_metric_samples = state.samples_seen
@@ -444,6 +446,9 @@ def train_one_epoch(state: TrainState, data, args, tb_writer=None):
                     for name, val in log_data.items():
                         tb_writer.add_scalar(name, val, step)
 
+                if mlflow_logger is not None:
+                    mlflow_logger.log(log_data, step=step)
+
                 if wb is not None:
                     log_data['step'] = step  # for backwards compatibility
                     wb.log(log_data, step=step)
@@ -480,6 +485,8 @@ def train_one_epoch(state: TrainState, data, args, tb_writer=None):
         if tb_writer is not None:
             for name, val in epoch_log.items():
                 tb_writer.add_scalar(name, val, last_step)
+        if mlflow_logger is not None:
+            mlflow_logger.log({**epoch_log, "epoch": epoch}, step=last_step)
         if wb is not None:
             wb.log({**epoch_log, "epoch": epoch}, step=last_step)
 

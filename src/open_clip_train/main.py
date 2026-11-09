@@ -41,6 +41,7 @@ from open_clip_train.naflex_data import (
     prewarm_naflex_patch_interpolator,
 )
 from open_clip_train.logger import setup_logging
+from open_clip_train.mlflow_logger import init_mlflow_logger
 from open_clip_train.optim import OptimizerCfg, create_optimizer
 from open_clip_train.params import parse_args, apply_model_traits
 from open_clip_train.utils import random_seed, torch_compile_kwargs
@@ -114,6 +115,7 @@ def main(args):
     args.wandb = 'wandb' in args.report_to or 'all' in args.report_to
     args.trackio = 'trackio' in args.report_to  # local-first, wandb-compatible; not part of 'all'
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
+    args.mlflow = 'mlflow' in args.report_to  # needs a tracking server; not part of 'all'
     if args.wandb and args.trackio:
         raise ValueError(
             "--report-to may enable only one of 'wandb' or 'trackio' (same API/role); tensorboard can pair with either."
@@ -602,6 +604,8 @@ def main(args):
             wb.save(params_file)
         _logger.debug(f'Finished loading {wb.__name__}.')
 
+    mlflow_logger = init_mlflow_logger(args) if args.mlflow and is_master(args) else None
+
     if args.torchcompile:
         _logger.info(f'Using torch.compile strategy={args.torchcompile_strategy}.')
 
@@ -738,6 +742,8 @@ def main(args):
 
     if wb is not None and is_master(args):
         wb.finish()
+    if mlflow_logger is not None:
+        mlflow_logger.finish()
 
     # run a final sync.
     if remote_sync_process is not None:

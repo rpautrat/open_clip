@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from open_clip import get_input_dtype
+from open_clip_train.mlflow_logger import get_mlflow_logger
 from open_clip_train.precision import get_autocast
 
 
@@ -81,7 +82,11 @@ def log_eval_metrics(metrics, data, epoch, args, logger, tb_writer=None, backend
                 tb_writer.add_scalar(name, val, epoch)
         with open(os.path.join(args.checkpoint_path, 'results.jsonl'), 'a+') as f:
             f.write(json.dumps(metrics) + '\n')
+    step = (data['train'].dataloader.num_batches // args.accum_freq) * epoch if 'train' in data else None
+    mlflow_logger = get_mlflow_logger()
+    if mlflow_logger is not None:
+        # Same x-axis as the training curves (global step); eval-only runs fall back to the epoch.
+        mlflow_logger.log({**log_data, 'epoch': epoch}, step=epoch if step is None else step)
     if backend is not None:
-        step = (data['train'].dataloader.num_batches // args.accum_freq) * epoch if 'train' in data else None
         log_data['epoch'] = epoch
         backend.log(log_data, step=step)

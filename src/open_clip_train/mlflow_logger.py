@@ -109,6 +109,16 @@ class MLflowLogger:
             self._queue.put(("params", entries))
 
     def _send(self, kind: str, entries: list) -> None:
+        if kind == "params":
+            # MLflow params are immutable: a restarted job logging into the same run (e.g. a preempted Azure ML job)
+            # keeps the first start's values; resending a changed one would fail the whole batch.
+            try:
+                existing = self._request("GET", f"runs/get?run_id={self.run_id}")["run"]["data"].get("params", [])
+                logged = {param["key"] for param in existing}
+                entries = [entry for entry in entries if entry["key"] not in logged]
+            except Exception as error:
+                self._warn(error, "params")
+                return
         limit = _MAX_METRICS_PER_BATCH if kind == "metrics" else _MAX_PARAMS_PER_BATCH
         for start in range(0, len(entries), limit):
             body = {"run_id": self.run_id, kind: entries[start:start + limit]}
